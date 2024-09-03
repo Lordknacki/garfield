@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeu en JavaScript</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
         canvas {
             display: block;
             margin: 0 auto;
             background: url('background.png') no-repeat center center;
             background-size: cover;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -24,27 +24,28 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        let playerName = '';
 
-        // Définir le rapport d'aspect souhaité, ici 16:9
-        const aspectRatio = 16 / 9;
-        let gameWidth, gameHeight;
-
-        // Fonction pour redimensionner le canvas tout en conservant le ratio d'aspect
+        // Fonction pour redimensionner le canvas au format 16:9
         function resizeCanvas() {
-            const windowRatio = window.innerWidth / window.innerHeight;
+            const aspectRatio = 16 / 9;
+            let windowWidth = window.innerWidth;
+            let windowHeight = window.innerHeight;
 
-            if (windowRatio > aspectRatio) {
-                // Fenêtre plus large que l'aspect ratio => ajuster la largeur
-                gameHeight = window.innerHeight;
-                gameWidth = gameHeight * aspectRatio;
+            if (windowWidth / windowHeight > aspectRatio) {
+                // Trop large, on ajuste la largeur
+                canvas.height = windowHeight;
+                canvas.width = windowHeight * aspectRatio;
             } else {
-                // Fenêtre plus haute que l'aspect ratio => ajuster la hauteur
-                gameWidth = window.innerWidth;
-                gameHeight = gameWidth / aspectRatio;
+                // Trop haut, on ajuste la hauteur
+                canvas.width = windowWidth;
+                canvas.height = windowWidth / aspectRatio;
             }
 
-            canvas.width = gameWidth;
-            canvas.height = gameHeight;
+            // Centrer le canvas dans la fenêtre
+            canvas.style.position = 'absolute';
+            canvas.style.left = `${(window.innerWidth - canvas.width) / 2}px`;
+            canvas.style.top = `${(window.innerHeight - canvas.height) / 2}px`;
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -78,7 +79,7 @@
 
         // Variables du jeu
         let playerSize = 50;
-        let playerPos = { x: gameWidth / 2, y: gameHeight - playerSize };
+        let playerPos = { x: canvas.width / 2, y: canvas.height - playerSize };
         let items = [];
         let itemSize = 50;
         let fallSpeed = 10;
@@ -88,9 +89,55 @@
         let gameDuration = 60000; // 1 minute
         let startTime = Date.now();
 
+        // Gestion des scores
+        function loadScores() {
+            return JSON.parse(localStorage.getItem('scores') || '[]');
+        }
+
+        function saveScore(newScore, name) {
+            let scores = loadScores();
+            scores.push({ name: name, score: newScore });
+            scores.sort((a, b) => b.score - a.score);
+            scores = scores.slice(0, 10);
+            localStorage.setItem('scores', JSON.stringify(scores));
+        }
+
+        function displayLeaderboard() {
+            ctx.fillStyle = '#000'; // Fond noir pendant les scores
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let scores = loadScores();
+            ctx.fillStyle = '#FFF';
+            ctx.font = '24px monospace';
+            let y = 100;
+            ctx.fillText("Leaderboard:", 100, y - 30);
+            scores.forEach((entry, index) => {
+                ctx.fillText(`${index + 1}. ${entry.name}: ${entry.score}`, 100, y);
+                y += 30;
+            });
+
+            // Générer un fichier scores.txt avec les scores
+            generateScoresFile(scores);
+        }
+
+        function generateScoresFile(scores) {
+            let scoresText = "Leaderboard:\n";
+            scores.forEach((entry, index) => {
+                scoresText += `${index + 1}. ${entry.name}: ${entry.score}\n`;
+            });
+
+            const blob = new Blob([scoresText], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'scores.txt';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // Fonction de génération des items
         function dropItems(timeLeft) {
-            if (timeLeft > 2) {
+            if (timeLeft > 3) {
                 if (items.length < maxItems && Math.random() < 0.1) {
                     let draw = Math.random() * 100;
                     let itemImage, points;
@@ -104,11 +151,11 @@
                         itemImage = goodItemImage;
                         points = 1;
                     }
-                    let itemPos = { x: Math.random() * (gameWidth - itemSize), y: 0, image: itemImage, points: points };
+                    let itemPos = { x: Math.random() * (canvas.width - itemSize), y: 0, image: itemImage, points: points };
                     items.push(itemPos);
                 }
             } else if (timeLeft === 2 && !specialItemAdded) {
-                let itemPos = { x: Math.random() * (gameWidth - itemSize), y: 0, image: goodItemImage, points: 5 };
+                let itemPos = { x: Math.random() * (canvas.width - itemSize), y: 0, image: goodItemImage, points: 5 };
                 items.push(itemPos);
                 specialItemAdded = true;
             }
@@ -123,7 +170,7 @@
 
         // Mise à jour des positions des items
         function updateItemPositions() {
-            items = items.filter(item => item.y <= gameHeight);
+            items = items.filter(item => item.y <= canvas.height);
             items.forEach(item => {
                 item.y += fallSpeed;
             });
@@ -151,12 +198,13 @@
             let timeLeft = Math.floor((gameDuration - (currentTime - startTime)) / 1000);
 
             if (timeLeft <= 0) {
-                ctx.clearRect(0, 0, gameWidth, gameHeight);
+                saveScore(score, playerName);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 displayLeaderboard();
                 return;
             }
 
-            ctx.clearRect(0, 0, gameWidth, gameHeight);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             dropItems(timeLeft);
             updateItemPositions();
@@ -170,19 +218,23 @@
             ctx.font = '35px monospace';
             ctx.fillStyle = '#000';
             ctx.fillText(`Score: ${score}`, 20, 40);
-            ctx.fillText(`Time: ${timeLeft}s`, gameWidth - 150, 40);
+            ctx.fillText(`Time: ${timeLeft}s`, canvas.width - 150, 40);
 
             requestAnimationFrame(gameLoop);
         }
 
         // Gestion des événements de la souris
         canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            playerPos.x = (e.clientX - rect.left) * (gameWidth / rect.width) - playerSize / 2;
+            playerPos.x = e.clientX - playerSize / 2;
         });
 
         // Démarrage du jeu après chargement des images
         imagesLoaded.then(() => {
+            // Demande le nom du joueur avant de commencer le jeu
+            playerName = prompt("Entrez votre nom pour jouer :");
+            if (!playerName) {
+                playerName = "Joueur Anonyme"; // Nom par défaut si aucun n'est fourni
+            }
             startTime = Date.now(); // Réinitialiser le temps de départ
             gameLoop();
         });
