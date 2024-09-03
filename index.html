@@ -21,8 +21,13 @@
         const ctx = canvas.getContext('2d');
 
         // Configuration du canvas
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Initial resize
 
         // Chargement des images
         const playerImage = new Image();
@@ -37,8 +42,18 @@
         const worseItemImage = new Image();
         worseItemImage.src = 'img/worse_item.png';
 
-        const cursorImage = new Image();
-        cursorImage.src = 'img/custom_cursor.png';
+        const imagesLoaded = new Promise((resolve) => {
+            let images = [playerImage, goodItemImage, badItemImage, worseItemImage];
+            let loadedCount = 0;
+            images.forEach(image => {
+                image.onload = () => {
+                    loadedCount++;
+                    if (loadedCount === images.length) {
+                        resolve();
+                    }
+                };
+            });
+        });
 
         // Variables du jeu
         let playerSize = 50;
@@ -153,11 +168,6 @@
             ctx.fillText(`Score: ${score}`, 20, 40);
             ctx.fillText(`Time: ${timeLeft}s`, canvas.width - 150, 40);
 
-            // Custom cursor
-            let mouseX = playerPos.x;
-            let mouseY = playerPos.y;
-            ctx.drawImage(cursorImage, mouseX, mouseY, 30, 30);
-
             requestAnimationFrame(gameLoop);
         }
 
@@ -166,7 +176,10 @@
             playerPos.x = e.clientX - playerSize / 2;
         });
 
-        gameLoop();
+        imagesLoaded.then(() => {
+            gameLoop();
+        });
+
     </script>
 </body>
 </html>
