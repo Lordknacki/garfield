@@ -11,6 +11,11 @@
             background: url('background.png') no-repeat center center;
             background-size: cover;
         }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -19,6 +24,7 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        let playerName = '';
 
         // Fonction pour redimensionner le canvas
         function resizeCanvas() {
@@ -28,13 +34,6 @@
 
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas(); // Initial resize
-
-        // Vérification de la bonne charge des images
-        function checkImage(img) {
-            if (!img.complete || img.naturalWidth === 0) {
-                console.error("L'image n'a pas pu être chargée:", img.src);
-            }
-        }
 
         // Chargement des images
         const playerImage = new Image();
@@ -49,20 +48,15 @@
         const worseItemImage = new Image();
         worseItemImage.src = 'worse_item.png';
 
-        // Promesse pour attendre que toutes les images soient chargées
         const imagesLoaded = new Promise((resolve) => {
             let images = [playerImage, goodItemImage, badItemImage, worseItemImage];
             let loadedCount = 0;
             images.forEach(image => {
                 image.onload = () => {
                     loadedCount++;
-                    checkImage(image); // Vérification après le chargement
                     if (loadedCount === images.length) {
                         resolve();
                     }
-                };
-                image.onerror = () => {
-                    console.error("Erreur de chargement de l'image:", image.src);
                 };
             });
         });
@@ -84,21 +78,25 @@
             return JSON.parse(localStorage.getItem('scores') || '[]');
         }
 
-        function saveScore(newScore) {
+        function saveScore(newScore, name) {
             let scores = loadScores();
-            scores.push(newScore);
-            scores.sort((a, b) => b - a);
+            scores.push({ name: name, score: newScore });
+            scores.sort((a, b) => b.score - a.score);
             scores = scores.slice(0, 10);
             localStorage.setItem('scores', JSON.stringify(scores));
         }
 
         function displayLeaderboard() {
+            ctx.fillStyle = '#000'; // Fond noir pendant les scores
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             let scores = loadScores();
             ctx.fillStyle = '#FFF';
             ctx.font = '24px monospace';
             let y = 100;
-            scores.forEach((score, index) => {
-                ctx.fillText(`${index + 1}. Score: ${score}`, 100, y);
+            ctx.fillText("Leaderboard:", 100, y - 30);
+            scores.forEach((entry, index) => {
+                ctx.fillText(`${index + 1}. ${entry.name}: ${entry.score}`, 100, y);
                 y += 30;
             });
         }
@@ -166,7 +164,7 @@
             let timeLeft = Math.floor((gameDuration - (currentTime - startTime)) / 1000);
 
             if (timeLeft <= 0) {
-                saveScore(score);
+                saveScore(score, playerName);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 displayLeaderboard();
                 return;
@@ -198,6 +196,12 @@
 
         // Démarrage du jeu après chargement des images
         imagesLoaded.then(() => {
+            // Demande le nom du joueur avant de commencer le jeu
+            playerName = prompt("Entrez votre nom pour jouer :");
+            if (!playerName) {
+                playerName = "Joueur Anonyme"; // Nom par défaut si aucun n'est fourni
+            }
+            startTime = Date.now(); // Réinitialiser le temps de départ
             gameLoop();
         });
     </script>
