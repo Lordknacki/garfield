@@ -8,7 +8,7 @@
         canvas {
             display: block;
             margin: 0 auto;
-            background: url('img/background.png') no-repeat center center;
+            background: url('background.png') no-repeat center center;
             background-size: cover;
         }
     </style>
@@ -20,7 +20,7 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Configuration du canvas
+        // Fonction pour redimensionner le canvas
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -29,28 +29,40 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas(); // Initial resize
 
+        // Vérification de la bonne charge des images
+        function checkImage(img) {
+            if (!img.complete || img.naturalWidth === 0) {
+                console.error("L'image n'a pas pu être chargée:", img.src);
+            }
+        }
+
         // Chargement des images
         const playerImage = new Image();
-        playerImage.src = 'img/player.png';
+        playerImage.src = 'player.png';
 
         const goodItemImage = new Image();
-        goodItemImage.src = 'img/good_item.png';
+        goodItemImage.src = 'good_item.png';
 
         const badItemImage = new Image();
-        badItemImage.src = 'img/bad_item.png';
+        badItemImage.src = 'bad_item.png';
 
         const worseItemImage = new Image();
-        worseItemImage.src = 'img/worse_item.png';
+        worseItemImage.src = 'worse_item.png';
 
+        // Promesse pour attendre que toutes les images soient chargées
         const imagesLoaded = new Promise((resolve) => {
             let images = [playerImage, goodItemImage, badItemImage, worseItemImage];
             let loadedCount = 0;
             images.forEach(image => {
                 image.onload = () => {
                     loadedCount++;
+                    checkImage(image); // Vérification après le chargement
                     if (loadedCount === images.length) {
                         resolve();
                     }
+                };
+                image.onerror = () => {
+                    console.error("Erreur de chargement de l'image:", image.src);
                 };
             });
         });
@@ -91,6 +103,7 @@
             });
         }
 
+        // Fonction de génération des items
         function dropItems(timeLeft) {
             if (timeLeft > 2) {
                 if (items.length < maxItems && Math.random() < 0.1) {
@@ -116,12 +129,14 @@
             }
         }
 
+        // Dessin des items
         function drawItems() {
             items.forEach(item => {
                 ctx.drawImage(item.image, item.x, item.y, itemSize, itemSize);
             });
         }
 
+        // Mise à jour des positions des items
         function updateItemPositions() {
             items = items.filter(item => item.y <= canvas.height);
             items.forEach(item => {
@@ -129,6 +144,7 @@
             });
         }
 
+        // Gestion des collisions
         function collisionCheck() {
             let playerRect = { x: playerPos.x, y: playerPos.y, width: playerSize, height: playerSize };
             for (let i = items.length - 1; i >= 0; i--) {
@@ -144,6 +160,7 @@
             }
         }
 
+        // Boucle principale du jeu
         function gameLoop() {
             let currentTime = Date.now();
             let timeLeft = Math.floor((gameDuration - (currentTime - startTime)) / 1000);
@@ -162,7 +179,10 @@
             collisionCheck();
             drawItems();
 
+            // Dessin du joueur
             ctx.drawImage(playerImage, playerPos.x, playerPos.y, playerSize, playerSize);
+
+            // Affichage du score et du temps restant
             ctx.font = '35px monospace';
             ctx.fillStyle = '#000';
             ctx.fillText(`Score: ${score}`, 20, 40);
@@ -176,10 +196,10 @@
             playerPos.x = e.clientX - playerSize / 2;
         });
 
+        // Démarrage du jeu après chargement des images
         imagesLoaded.then(() => {
             gameLoop();
         });
-
     </script>
 </body>
 </html>
