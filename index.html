@@ -99,6 +99,24 @@
                 ctx.fillText(`${index + 1}. ${entry.name}: ${entry.score}`, 100, y);
                 y += 30;
             });
+
+            // Générer un fichier scores.txt avec les scores
+            generateScoresFile(scores);
+        }
+
+        function generateScoresFile(scores) {
+            let scoresText = "Leaderboard:\n";
+            scores.forEach((entry, index) => {
+                scoresText += `${index + 1}. ${entry.name}: ${entry.score}\n`;
+            });
+
+            const blob = new Blob([scoresText], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'scores.txt';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Fonction de génération des items
