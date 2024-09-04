@@ -26,31 +26,26 @@
         const ctx = canvas.getContext('2d');
         let playerName = '';
 
-        // Fonction pour redimensionner le canvas en plein écran tout en maintenant le ratio 16:9
+        // Fonction pour redimensionner le canvas au format 16:9
         function resizeCanvas() {
             const aspectRatio = 16 / 9;
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-
-            let current_w, current_h;
+            let windowWidth = window.innerWidth;
+            let windowHeight = window.innerHeight;
 
             if (windowWidth / windowHeight > aspectRatio) {
-                // La fenêtre est plus large, on ajuste en fonction de la hauteur
-                current_h = windowHeight;
-                current_w = windowHeight * aspectRatio;
+                // Trop large, on ajuste la largeur
+                canvas.height = windowHeight;
+                canvas.width = windowHeight * aspectRatio;
             } else {
-                // La fenêtre est plus haute, on ajuste en fonction de la largeur
-                current_w = windowWidth;
-                current_h = windowWidth / aspectRatio;
+                // Trop haut, on ajuste la hauteur
+                canvas.width = windowWidth;
+                canvas.height = windowWidth / aspectRatio;
             }
-
-            canvas.width = current_w;
-            canvas.height = current_h;
 
             // Centrer le canvas dans la fenêtre
             canvas.style.position = 'absolute';
-            canvas.style.left = `${(window.innerWidth - current_w) / 2}px`;
-            canvas.style.top = `${(window.innerHeight - current_h) / 2}px`;
+            canvas.style.left = `${(window.innerWidth - canvas.width) / 2}px`;
+            canvas.style.top = `${(window.innerHeight - canvas.height) / 2}px`;
         }
 
         window.addEventListener('resize', resizeCanvas);
